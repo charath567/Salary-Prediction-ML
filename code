@@ -1,0 +1,98 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+import warnings
+
+# Setup
+warnings.filterwarnings('ignore')
+sns.set_theme(style="whitegrid")
+
+def generate_data(n_samples=200):
+    """Generates synthetic experience and salary data."""
+    np.random.seed(42)
+    experience = np.round(np.random.uniform(0.5, 20.0, n_samples), 1)
+    # Salary = Base + (Rate * Exp) + Noise
+    salary = 30000 + (4500 * experience) + np.random.normal(0, 5000, n_samples)
+    
+    df = pd.DataFrame({
+        'YearsExperience': experience,
+        'Salary': np.round(salary, 2)
+    })
+    return df
+
+def train_model(df):
+    """Trains a Linear Regression model and returns metrics."""
+    X = df[['YearsExperience']]
+    y = df['Salary']
+    
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    model = LinearRegression()
+    model.fit(X_train, y_train)
+    
+    y_pred = model.predict(X_test)
+    
+    metrics = {
+        "MAE": mean_absolute_error(y_test, y_pred),
+        "RMSE": np.sqrt(mean_squared_error(y_test, y_pred)),
+        "R2": r2_score(y_test, y_pred)
+    }
+    
+    return model, X_train, X_test, y_train, y_test, y_pred, metrics
+
+def visualize_results(model, X_train, X_test, y_train, y_test, y_pred):
+    """Creates performance visualization plots."""
+    plt.figure(figsize=(12, 5))
+    
+    # Regression Fit Plot
+    plt.subplot(1, 2, 1)
+    plt.scatter(X_train, y_train, color='steelblue', alpha=0.5, label='Train Data')
+    plt.scatter(X_test, y_test, color='coral', label='Test Data')
+    
+    line_x = np.linspace(X_train.min(), X_train.max(), 100).reshape(-1, 1)
+    plt.plot(line_x, model.predict(line_x), color='red', lw=2, label='Regression Line')
+    plt.title('Experience vs Salary (Fit)')
+    plt.xlabel('Years of Experience')
+    plt.ylabel('Salary')
+    plt.legend()
+
+    # Actual vs Predicted
+    plt.subplot(1, 2, 2)
+    plt.scatter(y_test, y_pred, color='purple', alpha=0.6)
+    plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'k--', lw=2)
+    plt.title('Actual vs Predicted')
+    plt.xlabel('Actual Salary')
+    plt.ylabel('Predicted Salary')
+    
+    plt.tight_layout()
+    plt.show()
+
+if __name__ == "__main__":  
+    print("--- Salary Prediction Project ---")
+    
+    # 1. Data Generation
+    data = generate_data()
+    print(f"Dataset generated: {data.shape[0]} samples")
+    
+    # 2. Training
+    model, X_train, X_test, y_train, y_test, y_pred, metrics = train_model(data)
+    
+    # 3. Output Results
+    print(f"\nModel Performance:")
+    print(f"R² Score: {metrics['R2']:.4f}")
+    print(f"MAE: ₹{metrics['MAE']:,.2f}")
+    print(f"RMSE: ₹{metrics['RMSE']:,.2f}")
+    
+    print(f"\nEquation: Salary = {model.coef_[0]:.2f} * Exp + {model.intercept_:.2f}")
+    
+    # 4. Visualization
+    visualize_results(model, X_train, X_test, y_train, y_test, y_pred)
+    
+    # 5. Custom Prediction
+    sample_exp = [[12.5]]
+    prediction = model.predict(sample_exp)
+    print(f"\nPredicted Salary for {sample_exp[0][0]} years: ₹{prediction[0]:,.2f}")
